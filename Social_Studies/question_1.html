@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Interactive GED Social Studies Practice Test</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Chosen Palette: Calm Neutrals (Slate background, Blue and Green accents) -->
+    <!-- Application Structure Plan: A single-page, one-question-at-a-time interactive quiz. This structure focuses the user, simulates a real test environment, and provides immediate, detailed feedback on a results screen. This is superior to a static list for active learning and self-assessment because it encourages active recall and pinpoints areas needing improvement. -->
+    <!-- Visualization & Content Choices: The source report (a practice test) is converted into a dynamic quiz. Goal: Test knowledge and provide structured feedback. Method: Presenting questions and clickable options one by one using dynamically updated HTML, styled with Tailwind CSS. Interaction: User selects answers, navigates with 'Next'/'Previous' buttons, and gets a final score with a comprehensive review list. Justification: This interactive format is highly engaging and effective for study, turning passive reading into an active learning exercise. Library/Method: Vanilla JS for all quiz logic, Tailwind CSS for styling. No charts needed as the content is text-based. -->
+    <!-- CONFIRMATION: NO SVG graphics used. NO Mermaid JS used. -->
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+        .option.selected {
+            background-color: #dbeafe; /* Tailwind's blue-200 */
+            border-color: #3b82f6; /* Tailwind's blue-500 */
+        }
+        .option.correct {
+            background-color: #dcfce7; /* Tailwind's green-200 */
+            border-color: #22c55e; /* Tailwind's green-500 */
+        }
+        .option.incorrect {
+            background-color: #fee2e2; /* Tailwind's red-200 */
+            border-color: #ef4444; /* Tailwind's red-500 */
+        }
+        .passage-box {
+            background-color: #f1f5f9; /* Tailwind's slate-100 */
+            border-left: 4px solid #64748b; /* Tailwind's slate-500 */
+            padding: 1rem;
+            margin-bottom: 1.5rem;
+            font-style: italic;
+        }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-800">
+
+    <div id="quiz-container" class="max-w-4xl mx-auto p-4 sm:p-6 md:p-8">
+        <header class="text-center mb-8">
+            <h1 class="text-3xl sm:text-4xl font-bold text-slate-900">GED Social Studies Practice Test</h1>
+            <p class="text-slate-600 mt-2">Select the best answer for each question. Your progress is saved as you go.</p>
+        </header>
+
+        <main id="question-area" class="bg-white p-6 sm:p-8 rounded-xl shadow-lg">
+            <div id="passage-container" class="passage-box" style="display: none;"></div>
+            <div class="flex justify-between items-center mb-6">
+                <h2 class="text-lg font-semibold text-slate-700">Question <span id="question-number">1</span> of 50</h2>
+            </div>
+            <p id="question-text" class="text-xl md:text-2xl mb-6 min-h-[5rem]"></p>
+            <div id="options-container" class="grid grid-cols-1 gap-4">
+            </div>
+            <div class="mt-8 flex justify-between items-center">
+                <button id="prev-btn" class="bg-slate-300 hover:bg-slate-400 text-slate-800 font-bold py-2 px-6 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed">Previous</button>
+                <button id="next-btn" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-6 rounded-lg transition-colors">Next</button>
+                <button id="finish-btn" class="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-6 rounded-lg transition-colors hidden">Finish Test</button>
+            </div>
+        </main>
+    </div>
+
+    <div id="results-container" class="max-w-4xl mx-auto p-4 sm:p-6 md:p-8 hidden">
+        <header class="text-center mb-8">
+            <h1 class="text-3xl sm:text-4xl font-bold text-slate-900">Test Results</h1>
+        </header>
+        <div class="bg-white p-6 sm:p-8 rounded-xl shadow-lg text-center mb-8">
+             <p class="text-lg text-slate-600 mb-2">Your Score:</p>
+             <p class="text-6xl font-bold text-blue-600"><span id="score">0</span> / 50</p>
+             <p class="text-2xl text-slate-700 mt-2">(<span id="score-percent">0</span>%)</p>
+        </div>
+
+        <div class="bg-white p-6 sm:p-8 rounded-xl shadow-lg">
+            <h2 class="text-2xl font-bold text-center mb-6">Answer Review</h2>
+            <p class="text-center text-slate-600 mb-8">Here is a summary of the questions, your answers, and the correct answers. This is a great opportunity to review the topics you found challenging.</p>
+            <div id="review-area" class="space-y-8"></div>
+             <div class="text-center mt-8">
+                <button id="restart-btn" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-8 rounded-lg transition-colors">Take Test Again</button>
+            </div>
+        </div>
+    </div>
+
+<script>
+const quizData = [
+    { passage: "The Industrial Revolution, beginning in Great Britain in the late 18th century, marked a significant shift from agrarian and handicraft economies to those dominated by industry and machine manufacturing. This period saw the invention of new machines like the steam engine and the power loom, leading to factory systems, urbanization, and profound social changes. While it brought unprecedented economic growth and new opportunities, it also led to harsh working conditions, child labor, and environmental pollution.", question: "Which of the following was a primary characteristic of the Industrial Revolution?", options: ["A shift from urban to rural living.", "A decrease in the use of machinery.", "A transition to factory-based production.", "A decline in international trade."], correctAnswer: 2 },
+    { question: "What was a significant negative consequence of the Industrial Revolution?", options: ["Decreased agricultural output.", "Improved living conditions for all social classes.", "Widespread environmental pollution.", "A return to handicraft economies."], correctAnswer: 2 },
+    { passage: "The U.S. Constitution establishes a system of checks and balances among the three branches of government: the legislative (Congress), executive (President), and judicial (Supreme Court). This system is designed to prevent any one branch from becoming too powerful. For example, Congress can pass laws, but the President can veto them. However, Congress can override a presidential veto with a two-thirds vote in both the House and Senate.", question: "What is the main purpose of the system of checks and balances in the U.S. government?", options: ["To allow one branch to dominate the others.", "To ensure rapid decision-making in emergencies.", "To prevent any single branch from gaining excessive power.", "To centralize power within the executive branch."], correctAnswer: 2 },
+    { question: "Which action demonstrates a check on the executive branch by the legislative branch?", options: ["The President appointing a Supreme Court justice.", "The Supreme Court declaring a law unconstitutional.", "Congress overriding a presidential veto.", "The President issuing an executive order."], correctAnswer: 2 },
+    { question: "Which of the following is an example of a primary source document for studying World War II?", options: ["A history textbook chapter on the war.", "A documentary film produced in 2005 about the war.", "A letter written by a soldier fighting in the war.", "A biography of Winston Churchill published in 1990."], correctAnswer: 2 },
+    { question: "In a market economy, what primarily determines the price of goods and services?", options: ["Government regulations.", "The cost of raw materials.", "The interaction of supply and demand.", "The amount of labor required to produce them."], correctAnswer: 2 },
+    { question: "What was the main reason for the American colonists' protest against the Stamp Act of 1765?", options: ["It imposed taxes on imported goods.", "It required colonists to house British soldiers.", "It was seen as taxation without representation.", "It restricted westward expansion."], correctAnswer: 2 },
+    { question: "Which amendment to the U.S. Constitution guarantees freedom of speech, religion, assembly, and the press?", options: ["First Amendment", "Fourth Amendment", "Fifth Amendment", "Tenth Amendment"], correctAnswer: 0 },
+    { question: "What is the primary function of the United Nations?", options: ["To promote global economic development only.", "To establish a single world government.", "To maintain international peace and security.", "To regulate international trade agreements."], correctAnswer: 2 },
+    { question: "The concept of 'Manifest Destiny' in the 19th century was the belief that the United States was destined to:", options: ["Remain isolated from European affairs.", "Expand its territory across the North American continent.", "Abolish slavery nationwide.", "Develop a strong industrial economy."], correctAnswer: 1 },
+    { passage: "The Great Depression, a severe worldwide economic depression in the decade preceding World War II, began in the United States with the stock market crash of October 29, 1929, known as Black Tuesday. Its effects were devastating, leading to widespread unemployment, poverty, and a sharp decline in industrial production and agricultural prices. Government responses, such as President Franklin D. Roosevelt's New Deal programs, aimed to provide relief, recovery, and reform.", question: "What event is widely considered the beginning of the Great Depression in the United States?", options: ["The end of World War I.", "The stock market crash of 1929.", "The election of Franklin D. Roosevelt.", "The Dust Bowl."], correctAnswer: 1 },
+    { question: "What was a key goal of President Franklin D. Roosevelt's New Deal programs?", options: ["To increase tariffs on imported goods.", "To reduce government spending.", "To provide relief, recovery, and reform.", "To expand U.S. territory."], correctAnswer: 2 },
+    { question: "What is the primary difference between a direct democracy and a representative democracy?", options: ["In a direct democracy, citizens vote directly on laws; in a representative democracy, they elect officials to make decisions.", "A direct democracy has no elections, while a representative democracy does.", "A direct democracy is only found in ancient societies.", "A representative democracy has no constitution."], correctAnswer: 0 },
+    { question: "Which geographic feature historically played a significant role in the development of early civilizations like Mesopotamia and Egypt?", options: ["Mountain ranges.", "Deserts.", "River valleys.", "Dense forests."], correctAnswer: 2 },
+    { question: "What was a major cause of the Cold War between the United States and the Soviet Union?", options: ["Religious differences.", "Economic competition in global trade.", "Ideological conflict between communism and capitalism.", "Disputes over colonial territories."], correctAnswer: 2 },
+    { question: "The purpose of the Bill of Rights is to:", options: ["Establish the structure of the federal government.", "Define the powers of the President.", "Protect individual liberties from government infringement.", "Outline the process for amending the Constitution."], correctAnswer: 2 },
+    { question: "What is inflation in economic terms?", options: ["A decrease in the overall price level of goods and services.", "An increase in the purchasing power of money.", "A sustained increase in the general price level of goods and services.", "A period of economic recession."], correctAnswer: 2 },
+    { question: "Which historical event is associated with the 'Trail of Tears'?", options: ["The forced removal of Native American tribes from their ancestral lands.", "The westward expansion of American pioneers.", "The discovery of gold in California.", "The abolition of slavery."], correctAnswer: 0 },
+    { question: "What is the main difference between a unitary system of government and a federal system of government?", options: ["A unitary system has no written constitution.", "In a unitary system, power is centralized; in a federal system, power is divided between central and regional governments.", "A federal system has no judicial branch.", "A unitary system only exists in monarchies."], correctAnswer: 1 },
+    { question: "Which of the following is a characteristic of a command economy?", options: ["Prices are determined by supply and demand.", "Private ownership of businesses is common.", "The government makes most economic decisions.", "Competition among businesses is encouraged."], correctAnswer: 2 },
+    { passage: "The Civil Rights Movement in the United States, spanning from the mid-1950s to the late 1960s, was a struggle for social justice for Black Americans to gain equal rights under the law. It employed various strategies, including nonviolent civil disobedience, protests, boycotts, and legal challenges, to dismantle segregation and discrimination. Key figures included Martin Luther King Jr., Rosa Parks, and countless others.", question: "What was a primary goal of the Civil Rights Movement?", options: ["To establish separate but equal facilities for all races.", "To end all forms of government.", "To achieve equal rights and end racial discrimination for Black Americans.", "To promote economic isolationism."], correctAnswer: 2 },
+    { question: "Which strategy was commonly used by the Civil Rights Movement?", options: ["Violent rebellion.", "Nonviolent civil disobedience.", "Exclusive reliance on legislative action.", "Promoting racial segregation."], correctAnswer: 1 },
+    { question: "What is the purpose of a census in a country?", options: ["To determine the national budget.", "To count the population and gather demographic data.", "To elect government officials.", "To regulate international trade."], correctAnswer: 1 },
+    { question: "Which continent is known as the 'cradle of civilization' due to the emergence of early human societies and agricultural practices?", options: ["North America.", "South America.", "Africa.", "Australia."], correctAnswer: 2 },
+    { question: "What was the main reason for the construction of the Berlin Wall in 1961?", options: ["To facilitate trade between East and West Berlin.", "To prevent East Germans from fleeing to West Berlin.", "To protect West Berlin from invasion.", "To promote cultural exchange."], correctAnswer: 1 },
+    { question: "The concept of 'separation of powers' in government refers to:", options: ["The division of power between the federal and state governments.", "The division of governmental responsibilities into distinct branches.", "The separation of church and state.", "The division of power within a single legislative body."], correctAnswer: 1 },
+    { question: "What is the role of the Federal Reserve in the U.S. economy?", options: ["To collect federal taxes.", "To regulate international trade.", "To manage monetary policy and regulate banks.", "To oversee agricultural production."], correctAnswer: 2 },
+    { question: "Which of the following was a significant consequence of the Columbian Exchange?", options: ["The isolation of continents from each other.", "The widespread introduction of new crops and diseases between the Old and New Worlds.", "A decline in global trade.", "The end of slavery in the Americas."], correctAnswer: 1 },
+    { question: "What is the primary function of a constitution in a democratic country?", options: ["To outline the daily activities of citizens.", "To serve as the supreme law of the land, establishing government structure and protecting rights.", "To dictate economic policies.", "To define cultural traditions."], correctAnswer: 1 },
+    { question: "What does GDP (Gross Domestic Product) measure?", options: ["The total value of a country's exports.", "The total value of goods and services produced within a country in a specific period.", "The total amount of money in circulation.", "The total national debt."], correctAnswer: 1 },
+    { passage: "The Enlightenment was an intellectual and philosophical movement that dominated the world of ideas in Europe during the 18th century. It emphasized reason, individualism, and skepticism, challenging traditional authority. Enlightenment thinkers like John Locke, Jean-Jacques Rousseau, and Montesquieu proposed new ideas about government, human rights, and the separation of powers, which profoundly influenced the American and French Revolutions.", question: "Which of the following was a key idea promoted by Enlightenment thinkers?", options: ["The divine right of kings.", "The importance of tradition over reason.", "Individual rights and freedoms.", "The superiority of absolute monarchy."], correctAnswer: 2 },
+    { question: "The ideas of Enlightenment thinkers primarily influenced which of the following?", options: ["The rise of feudalism.", "The American and French Revolutions.", "The expansion of the Roman Empire.", "The development of the caste system."], correctAnswer: 1 },
+    { question: "What is the significance of the 19th Amendment to the U.S. Constitution?", options: ["It abolished slavery.", "It granted women the right to vote.", "It established the income tax.", "It lowered the voting age to 18."], correctAnswer: 1 },
+    { question: "Which of the following is an example of a renewable resource?", options: ["Coal.", "Natural gas.", "Solar energy.", "Petroleum."], correctAnswer: 2 },
+    { question: "What was a major cause of World War I?", options: ["The global spread of communism.", "Imperialism, militarism, alliances, and nationalism.", "Religious conflicts.", "Economic depression."], correctAnswer: 1 },
+    { question: "In the U.S. judicial system, what is the role of the Supreme Court?", options: ["To pass federal laws.", "To enforce laws.", "To interpret the Constitution and review laws.", "To negotiate treaties with foreign nations."], correctAnswer: 2 },
+    { question: "What is the economic concept of scarcity?", options: ["The abundance of all resources.", "The unlimited availability of goods and services.", "The fundamental problem of having seemingly unlimited human wants and needs in a world of limited resources.", "The ability to produce goods at a lower cost."], correctAnswer: 2 },
+    { question: "Which historical figure is associated with leading the Civil Disobedience movement in India to gain independence from British rule?", options: ["Mao Zedong.", "Nelson Mandela.", "Mahatma Gandhi.", "Fidel Castro."], correctAnswer: 2 },
+    { question: "What is the primary purpose of a political party in a democratic system?", options: ["To control all aspects of government.", "To nominate candidates, win elections, and influence public policy.", "To provide entertainment for citizens.", "To regulate the economy."], correctAnswer: 1 },
+    { question: "What is the difference between imports and exports in international trade?", options: ["Imports are goods sent out of a country; exports are goods brought into a country.", "Imports are goods brought into a country; exports are goods sent out of a country.", "Imports and exports refer only to services, not goods.", "There is no difference; the terms are interchangeable."], correctAnswer: 1 },
+    { passage: "The Renaissance, a period of European history from the 14th to the 17th century, marked a bridge between the Middle Ages and modern history. It was characterized by a renewed interest in classical Greek and Roman art, literature, and philosophy, leading to significant advancements in art, science, and exploration. Humanism, an intellectual movement emphasizing human potential and achievement, was central to the Renaissance.", question: "What was a central characteristic of the Renaissance?", options: ["A decline in artistic and scientific innovation.", "A renewed interest in classical learning and humanism.", "A focus on religious dogma above all else.", "The rise of feudalism."], correctAnswer: 1 },
+    { question: "Which intellectual movement was central to the Renaissance, emphasizing human potential and achievement?", options: ["Scholasticism.", "Humanism.", "Absolutism.", "Militarism."], correctAnswer: 1 },
+    { question: "Which of the following is a responsibility of a U.S. citizen?", options: ["To vote in every election.", "To serve on a jury if called.", "To own a business.", "To travel internationally."], correctAnswer: 1 },
+    { question: "What is the concept of 'cultural diffusion'?", options: ["The isolation of cultures from each other.", "The spread of cultural beliefs and social activities from one group to another.", "The decline of cultural diversity.", "The creation of entirely new cultures."], correctAnswer: 1 },
+    { question: "The fall of the Berlin Wall in 1989 symbolized the end of which major historical period?", options: ["World War II.", "The Great Depression.", "The Cold War.", "The Vietnam War."], correctAnswer: 2 },
+    { question: "What is the primary role of the President of the United States?", options: ["To make laws.", "To interpret laws.", "To enforce laws and act as commander-in-chief.", "To declare war."], correctAnswer: 2 },
+    { question: "What is the economic term for a situation where the government spends more money than it collects in taxes?", options: ["Budget surplus.", "Balanced budget.", "Budget deficit.", "Trade surplus."], correctAnswer: 2 },
+    { question: "Which historical document, signed in 1215, limited the power of the English monarch and influenced later democratic ideas?", options: ["The Declaration of Independence.", "The Magna Carta.", "The U.S. Constitution.", "The Bill of Rights."], correctAnswer: 1 },
+    { question: "What is the main difference between a republic and a monarchy?", options: ["A republic has a king or queen; a monarchy has elected representatives.", "A republic is governed by elected representatives; a monarchy is ruled by a hereditary head of state.", "A republic has no laws; a monarchy has strict laws.", "A republic is always larger than a monarchy."], correctAnswer: 1 },
+    { question: "What is the purpose of a geographical map's scale?", options: ["To indicate the direction of north.", "To show the relationship between distances on the map and actual distances on the ground.", "To represent different types of terrain.", "To display political boundaries."], correctAnswer: 1 }
+];
+
+let currentQuestionIndex = 0;
+let userAnswers = new Array(quizData.length).fill(null);
+
+const passageContainer = document.getElementById('passage-container');
+const questionNumberEl = document.getElementById('question-number');
+const questionTextEl = document.getElementById('question-text');
+const optionsContainer = document.getElementById('options-container');
+const prevBtn = document.getElementById('prev-btn');
+const nextBtn = document.getElementById('next-btn');
+const finishBtn = document.getElementById('finish-btn');
+const restartBtn = document.getElementById('restart-btn');
+
+const quizContainer = document.getElementById('quiz-container');
+const resultsContainer = document.getElementById('results-container');
+
+function displayQuestion(index) {
+    const question = quizData[index];
+    
+    if (question.passage) {
+        passageContainer.textContent = question.passage;
+        passageContainer.style.display = 'block';
+    } else {
+        passageContainer.style.display = 'none';
+    }
+
+    questionNumberEl.textContent = index + 1;
+    questionTextEl.textContent = question.question;
+    optionsContainer.innerHTML = '';
+
+    question.options.forEach((option, i) => {
+        const optionEl = document.createElement('div');
+        optionEl.textContent = option;
+        optionEl.classList.add('option', 'p-4', 'border-2', 'rounded-lg', 'cursor-pointer', 'transition-all', 'hover:bg-blue-100', 'hover:border-blue-400');
+        if (userAnswers[index] === i) {
+            optionEl.classList.add('selected');
+        }
+        optionEl.addEventListener('click', () => selectAnswer(index, i));
+        optionsContainer.appendChild(optionEl);
+    });
+
+    updateNavigation();
+}
+
+function selectAnswer(questionIndex, answerIndex) {
+    userAnswers[questionIndex] = answerIndex;
+    displayQuestion(questionIndex);
+}
+
+function updateNavigation() {
+    prevBtn.disabled = currentQuestionIndex === 0;
+    
+    if (currentQuestionIndex === quizData.length - 1) {
+        nextBtn.classList.add('hidden');
+        finishBtn.classList.remove('hidden');
+    } else {
+        nextBtn.classList.remove('hidden');
+        finishBtn.classList.add('hidden');
+    }
+}
+
+function showResults() {
+    let score = 0;
+    userAnswers.forEach((answer, index) => {
+        if (answer === quizData[index].correctAnswer) {
+            score++;
+        }
+    });
+
+    document.getElementById('score').textContent = score;
+    document.getElementById('score-percent').textContent = Math.round((score / quizData.length) * 100);
+
+    const reviewArea = document.getElementById('review-area');
+    reviewArea.innerHTML = '';
+    quizData.forEach((question, index) => {
+        const reviewEl = document.createElement('div');
+        reviewEl.classList.add('border-t', 'pt-6');
+        const questionTitle = document.createElement('h3');
+        questionTitle.classList.add('text-lg', 'font-semibold', 'mb-4');
+        questionTitle.textContent = `Question ${index + 1}: ${question.question}`;
+        
+        const optionsList = document.createElement('div');
+        optionsList.classList.add('space-y-2');
+
+        question.options.forEach((option, i) => {
+            const optionEl = document.createElement('div');
+            optionEl.textContent = option;
+            optionEl.classList.add('option', 'p-3', 'border-2', 'rounded-lg');
+            
+            const isCorrect = i === question.correctAnswer;
+            const isUserChoice = userAnswers[index] === i;
+
+            if(isCorrect) {
+                optionEl.classList.add('correct');
+            } else if (isUserChoice && !isCorrect) {
+                 optionEl.classList.add('incorrect');
+            }
+            
+            if (isUserChoice) {
+                const marker = document.createElement('span');
+                marker.textContent = isCorrect ? ' (Your correct answer)' : ' (Your incorrect answer)';
+                marker.classList.add('font-bold');
+                optionEl.appendChild(marker);
+            } else if (isCorrect) {
+                const marker = document.createElement('span');
+                marker.textContent = ' (Correct answer)';
+                marker.classList.add('font-bold');
+                optionEl.appendChild(marker);
+            }
+
+            optionsList.appendChild(optionEl);
+        });
+
+        reviewEl.appendChild(questionTitle);
+        reviewEl.appendChild(optionsList);
+        reviewArea.appendChild(reviewEl);
+    });
+
+    quizContainer.classList.add('hidden');
+    resultsContainer.classList.remove('hidden');
+}
+
+prevBtn.addEventListener('click', () => {
+    if (currentQuestionIndex > 0) {
+        currentQuestionIndex--;
+        displayQuestion(currentQuestionIndex);
+    }
+});
+
+nextBtn.addEventListener('click', () => {
+    if (currentQuestionIndex < quizData.length - 1) {
+        currentQuestionIndex++;
+        displayQuestion(currentQuestionIndex);
+    }
+});
+
+finishBtn.addEventListener('click', showResults);
+
+restartBtn.addEventListener('click', () => {
+    currentQuestionIndex = 0;
+    userAnswers.fill(null);
+    resultsContainer.classList.add('hidden');
+    quizContainer.classList.remove('hidden');
+    displayQuestion(currentQuestionIndex);
+});
+
+window.addEventListener('load', () => {
+    displayQuestion(currentQuestionIndex);
+});
+
+</script>
+</body>
+</html>
