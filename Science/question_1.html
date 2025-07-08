@@ -1,0 +1,411 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Interactive GED Science Practice Quiz</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        .correct-answer-display {
+            color: #16a34a; /* Green for correct answers in results */
+            font-weight: 600;
+        }
+        .incorrect-answer-display {
+            color: #dc2626; /* Red for incorrect answers in results */
+            font-weight: 600;
+        }
+        .btn-disabled {
+            pointer-events: none;
+            opacity: 0.7;
+        }
+        .select-disabled {
+            pointer-events: none;
+            opacity: 0.7;
+        }
+    </style>
+    <!-- Chosen Palette: Calm Neutrals (Slate background, Indigo accents) -->
+    <!-- Application Structure Plan: The application is structured as a three-stage interactive quiz: 1) A start screen to introduce the quiz, 2) The main quiz interface displaying one question at a time for focused learning, and 3) A results screen summarizing the score and providing an option to restart. This sequential, feedback-driven flow is superior to a static list for self-assessment because it encourages active participation, provides immediate reinforcement, and allows users to pace themselves, enhancing knowledge retention and user engagement. The feedback is now delayed until the end for a comprehensive review. -->
+    <!-- Visualization & Content Choices: Report Info: 50 multiple-choice questions. -> Goal: Test user knowledge and provide learning feedback. -> Viz/Presentation Method: Interactive quiz with clickable buttons for answers, a progress bar, and a final score summary card. Now includes dropdowns for selected questions to vary interaction. -> Interaction: User clicks an answer button or selects an option from a dropdown. The selection is recorded, and the user proceeds to the next question without immediate feedback. After all questions, a results screen displays the total score and a detailed list of incorrect answers with correct solutions. -> Justification: This approach turns passive reading into an active learning experience. Delaying feedback encourages users to complete the entire quiz before reviewing, simulating a test environment, and allowing for a more holistic review of performance and improvement. -> Library/Method: Vanilla JavaScript for quiz logic, Tailwind CSS for styling. -->
+    <!-- CONFIRMATION: NO SVG graphics used. NO Mermaid JS used. -->
+</head>
+<body class="bg-slate-100 text-slate-800 flex items-center justify-center min-h-screen p-4">
+
+    <div id="quiz-container" class="w-full max-w-2xl mx-auto relative">
+
+        <!-- Timer Display -->
+        <!-- This div will display the countdown timer. It's positioned absolutely at the top-right -->
+        <!-- of the quiz container and styled with a dark background, white text, and rounded corners. -->
+        <!-- Adjusted top-2 and right-2 for smaller margin, and text-base for smaller font size -->
+        <div id="timer" class="absolute top-2 right-2 bg-slate-700 text-white text-base font-bold py-1 px-3 rounded-lg shadow-md z-10 hidden">
+            01:30:00
+        </div>
+
+        <!-- Start Screen -->
+        <div id="start-screen" class="bg-white p-8 rounded-xl shadow-lg text-center">
+            <h1 class="text-3xl font-bold text-slate-900 mb-4">GED Science Practice Quiz</h1>
+            <p class="text-slate-600 mb-6">Test your knowledge with 50 practice questions covering Life Science, Physical Science, and Earth & Space Science. You will have 1 hour and 30 minutes to complete the quiz. Click "Start Quiz" to begin.</p>
+            <button id="start-btn" class="w-full bg-indigo-600 text-white font-semibold py-3 px-6 rounded-lg hover:bg-indigo-700 transition-colors duration-300 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+                Start Quiz
+            </button>
+        </div>
+
+        <!-- Quiz Screen -->
+        <div id="quiz-screen" class="hidden bg-white p-8 rounded-xl shadow-lg">
+            <div id="progress-container" class="mb-4">
+                <p id="question-counter" class="text-sm text-slate-600 font-medium">Question 1 of 50</p>
+                <div class="w-full bg-slate-200 rounded-full h-2 mt-1">
+                    <div id="progress-bar" class="bg-indigo-600 h-2 rounded-full" style="width: 2%"></div>
+                </div>
+            </div>
+            <h2 id="question-text" class="text-xl font-semibold text-slate-900 mb-6">Question text goes here...</h2>
+            <div id="options-container" class="space-y-3">
+                <!-- Options will be dynamically inserted here -->
+            </div>
+            <div id="feedback-container" class="mt-4 text-center">
+                 <p id="feedback-text" class="font-medium">&nbsp;</p>
+            </div>
+            <button id="next-btn" class="hidden w-full mt-6 bg-indigo-600 text-white font-semibold py-3 px-6 rounded-lg hover:bg-indigo-700 transition-colors duration-300 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+                Next Question
+            </button>
+            <!-- New Submit Quiz button -->
+            <button id="submit-btn" class="hidden w-full mt-3 bg-slate-500 text-white font-semibold py-3 px-6 rounded-lg hover:bg-slate-600 transition-colors duration-300 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-slate-400">
+                Submit Quiz
+            </button>
+        </div>
+
+        <!-- Results Screen -->
+        <div id="results-screen" class="hidden bg-white p-8 rounded-xl shadow-lg text-center">
+            <h2 class="text-3xl font-bold text-slate-900 mb-2">Quiz Complete!</h2>
+            <p class="text-slate-600 mb-4">Here's how you did:</p>
+            <div class="bg-slate-100 rounded-lg p-6 my-6">
+                <p class="text-lg text-slate-700">You answered</p>
+                <p id="score-text" class="text-5xl font-bold text-indigo-600 my-2">0 / 50</p>
+                <p id="score-percent" class="text-lg text-slate-700">correctly (0%)</p>
+            </div>
+            <div id="detailed-results-container" class="mt-8 text-left space-y-4">
+                <h3 class="text-2xl font-semibold text-slate-900 mb-4">Review Your Answers</h3>
+                <!-- Detailed results will be inserted here -->
+            </div>
+            <button id="restart-btn" class="w-full mt-8 bg-indigo-600 text-white font-semibold py-3 px-6 rounded-lg hover:bg-indigo-700 transition-colors duration-300 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+                Try Again
+            </button>
+        </div>
+
+    </div>
+
+    <script>
+        const questions = [
+            { question: "Which organelle is responsible for generating most of the ATP (energy) in eukaryotic cells?", options: ["Nucleus", "Ribosome", "Mitochondrion", "Endoplasmic Reticulum"], answer: 2, type: "dropdown" },
+            { question: "What is the primary function of the circulatory system in the human body?", options: ["To break down food into nutrients", "To transport oxygen, nutrients, and waste products", "To regulate body temperature", "To produce hormones"], answer: 1 },
+            { question: "Which of the following is an example of a chemical change?", options: ["Melting ice", "Dissolving sugar in water", "Burning wood", "Tearing paper"], answer: 2 },
+            { question: "The law of conservation of energy states that energy cannot be created or destroyed, but it can be:", options: ["Transformed from one form to another", "Recycled indefinitely", "Stored permanently without loss", "Used up completely"], answer: 0, type: "dropdown" },
+            { question: "What is the process by which plants convert light energy into chemical energy?", options: ["Respiration", "Transpiration", "Photosynthesis", "Fermentation"], answer: 2 },
+            { question: "Which of the following is a renewable energy source?", options: ["Coal", "Natural Gas", "Solar Power", "Petroleum"], answer: 2, type: "dropdown" },
+            { question: "If an object has a mass of 10 kg and an acceleration of 2 m/s², what is the net force acting on it?", options: ["5 N", "12 N", "20 N", "100 N"], answer: 2, type: "dropdown" },
+            { question: "What is the main function of red blood cells?", options: ["Fighting infection", "Clotting blood", "Carrying oxygen", "Producing antibodies"], answer: 2 },
+            { question: "Which layer of the Earth is primarily composed of molten rock?", options: ["Crust", "Mantle", "Outer Core", "Inner Core"], answer: 2 },
+            { question: "What is the pH of a neutral solution?", options: ["0", "7", "14", "It varies depending on the solution"], answer: 1, type: "dropdown" },
+            { question: "Which of the following is an abiotic factor in an ecosystem?", options: ["Bacteria", "Sunlight", "Plants", "Animals"], answer: 1, type: "dropdown" },
+            { question: "What is the purpose of a vaccine?", options: ["To treat bacterial infections", "To provide immediate pain relief", "To stimulate the immune system to produce antibodies", "To reduce inflammation"], answer: 2 },
+            { question: "Which type of wave requires a medium to travel through?", options: ["Light waves", "Radio waves", "Sound waves", "X-rays"], answer: 2, type: "dropdown" },
+            { question: "What is the process called when water vapor in the atmosphere cools and changes into liquid water droplets, forming clouds?", options: ["Evaporation", "Condensation", "Precipitation", "Transpiration"], answer: 1 },
+            { question: "Which of the following is a characteristic of a living organism?", options: ["Ability to conduct electricity", "Ability to grow and reproduce", "Ability to rust", "Ability to dissolve in water"], answer: 1 },
+            { question: "What is the basic unit of heredity?", options: ["Cell", "Tissue", "Organ", "Gene"], answer: 3, type: "dropdown" },
+            { question: "Which of Newton's Laws of Motion states that for every action, there is an equal and opposite reaction?", options: ["First Law", "Second Law", "Third Law", "Law of Gravity"], answer: 2 },
+            { question: "What is the primary gas responsible for the greenhouse effect on Earth?", options: ["Oxygen", "Nitrogen", "Carbon Dioxide", "Argon"], answer: 2 },
+            { question: "Which part of the plant is responsible for absorbing water and nutrients from the soil?", options: ["Leaves", "Stem", "Flowers", "Roots"], answer: 3, type: "dropdown" },
+            { question: "What is the difference between a solute and a solvent in a solution?", options: ["Solute is the liquid, solvent is the solid.", "Solute is dissolved, solvent does the dissolving.", "Solute is always water, solvent is anything else.", "There is no difference, they are interchangeable terms."], answer: 1 },
+            { question: "Which of the following is a common symptom of dehydration?", options: ["Increased urination", "Dry mouth and thirst", "Swollen ankles", "Increased appetite"], answer: 1, type: "dropdown" },
+            { question: "What is the function of the skeletal system?", options: ["To digest food", "To provide support and protect organs", "To pump blood", "To transmit nerve signals"], answer: 1, type: "dropdown" },
+            { question: "Which of these is a measure of the average kinetic energy of the particles in a substance?", options: ["Heat", "Temperature", "Energy", "Volume"], answer: 1 },
+            { question: "What is the process by which organisms with traits better suited to their environment tend to survive and reproduce more successfully?", options: ["Genetic mutation", "Natural selection", "Artificial selection", "Genetic drift"], answer: 1 },
+            { question: "Which astronomical body is known for its prominent ring system?", options: ["Mars", "Jupiter", "Saturn", "Uranus"], answer: 2, type: "dropdown" },
+            { question: "What is the difference between an element and a compound?", options: ["An element is a pure substance, while a compound is a mixture.", "An element is made of one type of atom, a compound is made of two or more different atoms chemically bonded.", "An element can be broken down, a compound cannot.", "An element is always a gas, a compound is always a solid."], answer: 1 },
+            { question: "Which type of ecosystem is characterized by very low rainfall and extreme temperatures?", options: ["Rainforest", "Tundra", "Desert", "Grassland"], answer: 2 },
+            { question: "What is the role of decomposers in an ecosystem?", options: ["To produce their own food", "To consume other organisms", "To break down dead organic matter", "To convert light energy into chemical energy"], answer: 2, type: "dropdown" },
+            { question: "Which of the following is a physical property of matter?", options: ["Flammability", "Reactivity with acid", "Density", "Ability to rust"], answer: 2 },
+            { question: "What is the purpose of the ozone layer in Earth's atmosphere?", options: ["To regulate temperature", "To absorb harmful ultraviolet (UV) radiation", "To produce oxygen", "To create clouds"], answer: 1 },
+            { question: "Which human body system is responsible for controlling and coordinating all body activities?", options: ["Digestive system", "Nervous system", "Respiratory system", "Endocrine system"], answer: 1 },
+            { question: "What is the main difference between a hypothesis and a theory in science?", options: ["A hypothesis is a proven fact, a theory is an educated guess.", "A hypothesis is a testable explanation, a theory is a well-substantiated explanation.", "A hypothesis is always wrong, a theory is always right.", "They are the same thing."], answer: 1 },
+            { question: "Which type of rock is formed from the cooling and solidification of molten magma or lava?", options: ["Sedimentary", "Metamorphic", "Igneous", "Fossil"], answer: 2 },
+            { question: "What is the process by which plants release water vapor into the atmosphere through their leaves?", options: ["Evaporation", "Condensation", "Precipitation", "Transpiration"], answer: 3 },
+            { question: "Which of the following is a vector quantity, meaning it has both magnitude and direction?", options: ["Mass", "Speed", "Distance", "Velocity"], answer: 3 },
+            { question: "What is the primary role of chlorophyll in plants?", options: ["To absorb water", "To attract pollinators", "To absorb sunlight for photosynthesis", "To provide structural support"], answer: 2 },
+            { question: "Which of the following statements about DNA is true?", options: ["It is found only in the nucleus of animal cells.", "It carries the genetic instructions for the development and functioning of living organisms.", "It is a simple sugar used for energy.", "It is responsible for breaking down food in the digestive system."], answer: 1 },
+            { question: "What is the unit of electrical resistance?", options: ["Volt", "Ampere", "Ohm", "Watt"], answer: 2 },
+            { question: "Which celestial body orbits the Earth?", options: ["Sun", "Mars", "Moon", "Venus"], answer: 2 },
+            { question: "What is the primary cause of tides on Earth?", options: ["Earth's rotation", "Wind patterns", "Gravitational pull of the Moon and Sun", "Ocean currents"], answer: 2 },
+            { question: "Which of the following is a common characteristic of viruses?", options: ["They are single-celled organisms that can reproduce independently.", "They are non-living entities that require a host cell to reproduce.", "They are beneficial bacteria found in the human gut.", "They are large, complex organisms visible to the naked eye."], answer: 1 },
+            { question: "What is the process by which a solid changes directly into a gas without passing through a liquid phase?", options: ["Melting", "Evaporation", "Sublimation", "Condensation"], answer: 2 },
+            { question: "Which type of energy is stored in the bonds of chemical compounds?", options: ["Kinetic energy", "Potential energy", "Chemical energy", "Thermal energy"], answer: 2 },
+            { question: "What is the main function of white blood cells?", options: ["To transport oxygen", "To clot blood", "To fight infection", "To carry nutrients"], answer: 2 },
+            { question: "Which of the following is an example of a producer in a food chain?", options: ["Lion", "Mushroom", "Grass", "Rabbit"], answer: 2 },
+            { question: "What is the scientific term for the process of cell division that results in two daughter cells, each with the same number and kind of chromosomes as the parent cell?", options: ["Meiosis", "Mitosis", "Fertilization", "Transcription"], answer: 1 },
+            { question: "Which force opposes motion between two surfaces in contact?", options: ["Gravity", "Tension", "Friction", "Normal force"], answer: 2 },
+            { question: "What is the primary purpose of the digestive system?", options: ["To circulate blood", "To break down food into nutrients for the body", "To produce hormones", "To exchange gases"], answer: 1 },
+            { question: "Which of the following is a major contributor to air pollution?", options: ["Reforestation", "Use of renewable energy", "Burning fossil fuels", "Recycling"], answer: 2 },
+            { question: "What is the name of the galaxy our solar system is a part of?", options: ["Andromeda Galaxy", "Triangulum Galaxy", "Whirlpool Galaxy", "Milky Way Galaxy"], answer: 3 }
+        ];
+
+        // Get references to HTML elements
+        const startScreen = document.getElementById('start-screen');
+        const quizScreen = document.getElementById('quiz-screen');
+        const resultsScreen = document.getElementById('results-screen');
+        const timerDisplay = document.getElementById('timer'); // Reference to the timer display
+
+        const startBtn = document.getElementById('start-btn');
+        const nextBtn = document.getElementById('next-btn');
+        const submitBtn = document.getElementById('submit-btn'); // Reference to the new submit button
+        const restartBtn = document.getElementById('restart-btn');
+
+        const questionText = document.getElementById('question-text');
+        const optionsContainer = document.getElementById('options-container');
+        const questionCounter = document.getElementById('question-counter');
+        const progressBar = document.getElementById('progress-bar');
+        const feedbackText = document.getElementById('feedback-text');
+        const scoreText = document.getElementById('score-text');
+        const scorePercent = document.getElementById('score-percent');
+        const detailedResultsContainer = document.getElementById('detailed-results-container');
+
+        // Quiz state variables
+        let currentQuestionIndex = 0;
+        let score = 0;
+        let userAnswers = []; // To store user's selected index for each question
+        let timeLeft = 90 * 60; // 1 hour 30 minutes in seconds (90 minutes * 60 seconds/minute)
+        let timerInterval; // Variable to hold the interval ID for the timer
+
+        // Event Listeners
+        startBtn.addEventListener('click', startQuiz);
+        nextBtn.addEventListener('click', nextQuestion);
+        submitBtn.addEventListener('click', showResults); // Submit button now calls showResults
+        restartBtn.addEventListener('click', restartQuiz);
+
+        /**
+         * Initializes and starts the quiz.
+         * Hides the start screen, shows the quiz screen and timer,
+         * resets quiz state, and starts the countdown timer.
+         */
+        function startQuiz() {
+            startScreen.classList.add('hidden');
+            quizScreen.classList.remove('hidden');
+            timerDisplay.classList.remove('hidden'); // Show the timer display
+            currentQuestionIndex = 0;
+            score = 0;
+            userAnswers = Array(questions.length).fill(null); // Initialize userAnswers array with nulls
+            timeLeft = 90 * 60; // Reset timer for each quiz start
+            startTimer(); // Start the countdown timer
+            showQuestion(); // Display the first question
+            submitBtn.classList.remove('hidden'); // Show submit button once quiz starts
+        }
+
+        /**
+         * Starts the countdown timer.
+         * Updates the timer display every second and automatically submits the quiz when time runs out.
+         */
+        function startTimer() {
+            // Clear any existing interval to prevent multiple timers running
+            if (timerInterval) {
+                clearInterval(timerInterval);
+            }
+
+            timerInterval = setInterval(() => {
+                // Calculate minutes and seconds from timeLeft
+                const hours = Math.floor(timeLeft / 3600);
+                const minutes = Math.floor((timeLeft % 3600) / 60);
+                const seconds = timeLeft % 60;
+
+                // Format the time to HH:MM:SS and update the display
+                timerDisplay.innerText = 
+                    `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+
+                if (timeLeft <= 0) {
+                    clearInterval(timerInterval); // Stop the timer
+                    showResults(); // Automatically submit when time is up
+                }
+                timeLeft--; // Decrement time left
+            }, 1000); // Update every 1 second (1000 milliseconds)
+        }
+
+        /**
+         * Displays the current question based on `currentQuestionIndex`.
+         * Renders options as buttons or a dropdown, and handles user selections.
+         */
+        function showQuestion() {
+            resetState(); // Clear previous options and feedback
+            const currentQuestion = questions[currentQuestionIndex];
+            questionText.innerText = currentQuestion.question;
+            questionCounter.innerText = `Question ${currentQuestionIndex + 1} of ${questions.length}`;
+            progressBar.style.width = `${((currentQuestionIndex + 1) / questions.length) * 100}%`;
+
+            if (currentQuestion.type === 'dropdown') {
+                const selectElement = document.createElement('select');
+                selectElement.id = 'dropdown-select';
+                selectElement.classList.add('w-full', 'p-3', 'bg-white', 'border', 'border-slate-300', 'rounded-lg', 'focus:outline-none', 'focus:ring-2', 'focus:ring-indigo-500', 'focus:border-transparent');
+                
+                const defaultOption = document.createElement('option');
+                defaultOption.value = "";
+                defaultOption.innerText = "Select an answer";
+                defaultOption.disabled = true;
+                defaultOption.selected = true;
+                selectElement.appendChild(defaultOption);
+
+                currentQuestion.options.forEach((option, index) => {
+                    const optionElement = document.createElement('option');
+                    optionElement.value = index;
+                    optionElement.innerText = option;
+                    selectElement.appendChild(optionElement);
+                });
+                optionsContainer.appendChild(selectElement);
+
+                // If user previously answered, pre-select it and disable dropdown
+                if (userAnswers[currentQuestionIndex] !== null) {
+                    selectElement.value = userAnswers[currentQuestionIndex];
+                    selectElement.classList.add('select-disabled');
+                    nextBtn.classList.remove('hidden'); // Show next button if already answered
+                }
+
+                // Event listener for dropdown change
+                selectElement.addEventListener('change', (e) => {
+                    const selectedIndex = parseInt(e.target.value);
+                    userAnswers[currentQuestionIndex] = selectedIndex; // Store the selected answer
+                    e.target.classList.add('select-disabled'); // Disable dropdown after selection
+                    nextBtn.classList.remove('hidden'); // Show next button
+                });
+
+            } else {
+                // Render options as buttons
+                currentQuestion.options.forEach((option, index) => {
+                    const button = document.createElement('button');
+                    button.innerText = option;
+                    button.classList.add('w-full', 'text-left', 'p-4', 'bg-white', 'border', 'border-slate-300', 'rounded-lg', 'hover:bg-slate-100', 'transition-colors', 'duration-200');
+                    button.dataset.index = index; // Store the option index in a data attribute
+
+                    // If user previously answered, mark it and disable buttons
+                    if (userAnswers[currentQuestionIndex] !== null) {
+                        if (userAnswers[currentQuestionIndex] === index) {
+                            button.classList.add('bg-indigo-200'); // Highlight the selected option
+                        }
+                        button.classList.add('btn-disabled'); // Disable all buttons
+                        nextBtn.classList.remove('hidden'); // Show next button if already answered
+                    }
+
+                    // Event listener for button click
+                    button.addEventListener('click', (e) => {
+                        const selectedIndex = parseInt(e.target.dataset.index);
+                        userAnswers[currentQuestionIndex] = selectedIndex; // Store the selected answer
+                        // Disable all option buttons after a selection is made
+                        Array.from(optionsContainer.children).forEach(btn => {
+                            btn.classList.add('btn-disabled');
+                            if (parseInt(btn.dataset.index) === selectedIndex) {
+                                btn.classList.add('bg-indigo-200'); // Highlight the selected option
+                            }
+                        });
+                        nextBtn.classList.remove('hidden'); // Show next button
+                    });
+                    optionsContainer.appendChild(button);
+                });
+            }
+        }
+
+        /**
+         * Resets the UI state for displaying a new question.
+         * Hides the next button, clears feedback, and removes all previous options.
+         */
+        function resetState() {
+            nextBtn.classList.add('hidden');
+            nextBtn.innerText = 'Next Question'; // Reset button text
+            feedbackText.innerHTML = "&nbsp;"; // Clear feedback text
+            feedbackText.classList.remove('text-green-600', 'text-red-600');
+            // Remove all child elements from the options container
+            while (optionsContainer.firstChild) {
+                optionsContainer.removeChild(optionsContainer.firstChild);
+            }
+            // Update next button text for the last question
+            if (currentQuestionIndex === questions.length - 1) {
+                nextBtn.innerText = 'View Results';
+            }
+        }
+        
+        /**
+         * Advances to the next question or shows results if it's the last question.
+         */
+        function nextQuestion() {
+            if (currentQuestionIndex < questions.length - 1) {
+                currentQuestionIndex++;
+                showQuestion();
+            } else {
+                showResults(); // If it's the last question, show results
+            }
+        }
+
+        /**
+         * Calculates the score, displays the results screen, and shows detailed answers.
+         * Stops the timer.
+         */
+        function showResults() {
+            clearInterval(timerInterval); // Stop the timer when results are shown
+            quizScreen.classList.add('hidden'); // Hide the quiz screen
+            resultsScreen.classList.remove('hidden'); // Show the results screen
+            timerDisplay.classList.add('hidden'); // Hide timer on results screen
+            
+            score = 0; // Reset score before recalculating
+            // Clear previous detailed results and add the heading back
+            detailedResultsContainer.innerHTML = '<h3 class="text-2xl font-semibold text-slate-900 mb-4">Review Your Answers</h3>';
+
+            // Iterate through questions to calculate score and display detailed results
+            questions.forEach((q, index) => {
+                const userAnswerIndex = userAnswers[index];
+                const correctAnswerIndex = q.answer;
+                
+                if (userAnswerIndex === correctAnswerIndex) {
+                    score++; // Increment score if the answer is correct
+                } else {
+                    // Create a div for incorrect answers to show question, user's answer, and correct answer
+                    const resultDiv = document.createElement('div');
+                    resultDiv.classList.add('bg-slate-50', 'p-4', 'rounded-lg', 'border', 'border-slate-200');
+                    
+                    const questionP = document.createElement('p');
+                    questionP.classList.add('font-semibold', 'text-slate-800', 'mb-2');
+                    questionP.innerText = `Question ${index + 1}: ${q.question}`;
+                    resultDiv.appendChild(questionP);
+
+                    const yourAnswerP = document.createElement('p');
+                    yourAnswerP.classList.add('text-sm');
+                    const yourAnswerText = userAnswerIndex !== null ? q.options[userAnswerIndex] : "No answer selected";
+                    yourAnswerP.innerHTML = `Your Answer: <span class="incorrect-answer-display">${yourAnswerText}</span>`;
+                    resultDiv.appendChild(yourAnswerP);
+
+                    const correctAnswerP = document.createElement('p');
+                    correctAnswerP.classList.add('text-sm');
+                    correctAnswerP.innerHTML = `Correct Answer: <span class="correct-answer-display">${q.options[correctAnswerIndex]}</span>`;
+                    resultDiv.appendChild(correctAnswerP);
+
+                    detailedResultsContainer.appendChild(resultDiv);
+                }
+            });
+
+            // Calculate and display the final score and percentage
+            const percentage = Math.round((score / questions.length) * 100);
+            scoreText.innerText = `${score} / ${questions.length}`;
+            scorePercent.innerText = `correctly (${percentage}%)`;
+        }
+        
+        /**
+         * Resets the quiz to its initial state, ready for a new attempt.
+         * Hides the results screen and shows the start screen.
+         * Clears the timer interval and hides the timer display.
+         */
+        function restartQuiz() {
+            resultsScreen.classList.add('hidden'); // Hide results screen
+            startScreen.classList.remove('hidden'); // Show start screen
+            clearInterval(timerInterval); // Ensure any running timer is cleared
+            timerDisplay.classList.add('hidden'); // Hide timer until quiz starts again
+        }
+
+    </script>
+</body>
+</html>
