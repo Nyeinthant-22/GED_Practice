@@ -1,0 +1,566 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mathematics Intensive Test</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Inter Font -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+</head>
+<body class="bg-gradient-to-br from-blue-100 to-purple-100 min-h-screen flex items-center justify-center font-inter p-4">
+    <div class="bg-white rounded-xl shadow-lg p-8 max-w-2xl w-full space-y-6">
+        <h1 class="text-4xl font-bold text-center text-gray-800 mb-6">Mathematics Intensive Test</h1>
+
+        <!-- Message Box for user feedback (now used for general info, not per-question feedback) -->
+        <div id="messageBox" class="hidden bg-blue-100 border border-blue-400 text-blue-700 px-4 py-3 rounded-lg relative mb-4" role="alert">
+            <span id="messageText" class="block sm:inline"></span>
+            <span class="absolute top-0 bottom-0 right-0 px-4 py-3 cursor-pointer" onclick="document.getElementById('messageBox').classList.add('hidden')">
+                <svg class="fill-current h-6 w-6 text-blue-500" role="button" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20"><title>Close</title><path d="M14.348 14.849a1.2 1.2 0 0 1-1.697 0L10 11.697l-2.651 2.652a1.2 1.2 0 1 1-1.697-1.697L8.303 10 5.651 7.348a1.2 1.2 0 0 1 1.697-1.697L10 8.303l2.651-2.652a1.2 1.2 0 0 1 1.697 1.697L11.697 10l2.652 2.651a1.2 1.2 0 0 1 0 1.698z"/></svg>
+            </span>
+        </div>
+
+        <div id="testContainer" class="space-y-6">
+            <!-- Question will be loaded here -->
+            <div id="questionDisplay" class="text-xl font-semibold text-gray-700"></div>
+            <div id="optionsDisplay" class="space-y-3">
+                <!-- Options will be loaded here -->
+            </div>
+            <input type="text" id="answerInput" class="hidden w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Enter your answer">
+
+            <div class="flex justify-between items-center mt-6">
+                <button id="previousButton" class="px-6 py-3 bg-gray-400 text-white font-semibold rounded-lg shadow-md hover:bg-gray-500 focus:outline-none focus:ring-2 focus:ring-gray-300 focus:ring-offset-2 transition duration-200 hidden">Previous</button>
+                <button id="submitButton" class="px-6 py-3 bg-blue-600 text-white font-semibold rounded-lg shadow-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition duration-200">Submit Answer</button>
+                <button id="nextButton" class="px-6 py-3 bg-purple-600 text-white font-semibold rounded-lg shadow-md hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2 transition duration-200 hidden">Next Question</button>
+            </div>
+        </div>
+
+        <div id="resultContainer" class="hidden text-center space-y-4">
+            <h2 class="text-3xl font-bold text-gray-800">Test Complete!</h2>
+            <p class="text-2xl text-gray-700">Your Score: <span id="scoreDisplay" class="font-bold"></span> / <span id="totalPossibleScoreDisplay" class="font-bold"></span></p>
+            <div id="detailedResultsContainer" class="mt-8 text-left space-y-4 p-4 bg-gray-50 rounded-lg shadow-inner">
+                <!-- Detailed results will be appended here -->
+            </div>
+            <button id="restartButton" class="px-6 py-3 bg-green-600 text-white font-semibold rounded-lg shadow-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 transition duration-200">Restart Test</button>
+        </div>
+    </div>
+
+    <script>
+        // Set up global variables for Firebase configuration and app ID
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+        const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {};
+
+        // Function to display messages to the user
+        function showMessage(message, type = 'info') {
+            const messageBox = document.getElementById('messageBox');
+            const messageText = document.getElementById('messageText');
+            messageText.textContent = message;
+            messageBox.classList.remove('hidden', 'bg-red-100', 'border-red-400', 'text-red-700', 'bg-green-100', 'border-green-400', 'text-green-700', 'bg-blue-100', 'border-blue-400', 'text-blue-700');
+
+            if (type === 'error') {
+                messageBox.classList.add('bg-red-100', 'border-red-400', 'text-red-700');
+            } else if (type === 'success') {
+                messageBox.classList.add('bg-green-100', 'border-green-400', 'text-green-700');
+            } else {
+                messageBox.classList.add('bg-blue-100', 'border-blue-400', 'text-blue-700');
+            }
+            messageBox.classList.remove('hidden');
+        }
+
+        // Define the questions for the test
+        const questions = [
+            // Part 1: Numbers and Operations
+            {
+                type: 'multiple-choice',
+                question: '1. Simplify: (15 - 3 × 2)^2 / (7 + (-2)^3)',
+                options: ['-36', '-12', '12', '36'],
+                answer: '-36'
+            },
+            {
+                type: 'multiple-choice',
+                question: '2. Order the following numbers from least to greatest: -3.14, -π (approx. -3.14159), -3.14 (repeating), -√10 (approx. -3.162)',
+                options: ['-√10, -π, -3.14 (repeating), -3.14', '-π, -√10, -3.14 (repeating), -3.14', '-3.14 (repeating), -π, -√10, -3.14', '-3.14, -3.14 (repeating), -π, -√10'],
+                answer: '-√10, -π, -3.14 (repeating), -3.14'
+            },
+            {
+                type: 'multiple-choice',
+                question: '3. Evaluate: |1/4 - 2/3| + |-1/6|',
+                options: ['5/12', '7/12', '1/4', '1/2'],
+                answer: '7/12'
+            },
+            {
+                type: 'multiple-choice',
+                question: '4. What is the value of x if the reciprocal of (x-2) is 0.25?',
+                options: ['-2', '2', '4', '6'],
+                answer: '6'
+            },
+            {
+                type: 'multiple-choice',
+                question: '5. Simplify: (2^5 × 4^-2) / 8^(1/3)',
+                options: ['2', '4', '1/2', '1/4'],
+                answer: '2'
+            },
+            {
+                type: 'multiple-choice',
+                question: '6. Which of the following is equivalent to (x^3 y^-2)^4 ÷ (x^-1 y^5)^2 ?',
+                options: ['x^10 y^-18', 'x^14 y^-18', 'x^14 y^-6', 'x^10 y^-6'],
+                answer: 'x^14 y^-18'
+            },
+            {
+                type: 'multiple-choice',
+                question: '7. Calculate: (0.0003 × 10^5) ÷ (6 × 10^-2)',
+                options: ['5 × 10^3', '5 × 10^4', '5 × 10^2', '5 × 10^5'],
+                answer: '5 × 10^2'
+            },
+            {
+                type: 'multiple-choice',
+                question: '8. If a = -2, b = 3, and c = -1, what is the value of (a^b - c^a) ÷ (ab) ?',
+                options: ['5/6', '-5/6', '3/4', '-3/4'],
+                answer: '-5/6'
+            },
+            {
+                type: 'multiple-choice',
+                question: '9. The square root of a number is between 7 and 8. Which of the following could be the number?',
+                options: ['48', '50', '60', '65'],
+                answer: '60'
+            },
+            {
+                type: 'multiple-choice',
+                question: '10. A number is decreased by 20%, then the result is increased by 25%. What is the overall percentage change?',
+                options: ['No change', '5% decrease', '5% increase', '10% increase'],
+                answer: 'No change'
+            },
+            // Part 2: Algebra
+            {
+                type: 'multiple-choice',
+                question: '11. Solve for x: (2x - 3)/4 - (x+1)/3 = 1/2',
+                options: ['x = 5', 'x = 7', 'x = 11', 'x = 13'],
+                answer: 'x = 13'
+            },
+            {
+                type: 'multiple-choice',
+                question: '12. Expand and simplify: (3x - 2y)^2 - (x + 3y)(x - 3y)',
+                options: ['8x^2 - 12xy - 5y^2', '8x^2 - 12xy + 13y^2', '8x^2 - 12xy - 13y^2', '8x^2 - 12xy + 5y^2'],
+                answer: '8x^2 - 12xy + 13y^2'
+            },
+            {
+                type: 'multiple-choice',
+                question: '13. Factor the expression completely: 2x^3 - 18x',
+                options: ['2x(x^2 - 9)', '2x(x - 3)(x + 3)', '2x(x - 3)^2', '2(x^3 - 9x)'],
+                answer: '2x(x - 3)(x + 3)'
+            },
+            {
+                type: 'multiple-choice',
+                question: '14. If 3x - y = 7 and x + 2y = 1, find the value of x + y.',
+                options: ['1', '2', '3', '4'],
+                answer: '3'
+            },
+            {
+                type: 'multiple-choice',
+                question: '15. Solve the inequality: -2(3x - 5) ≤ 4x + 10',
+                options: ['x ≤ 0', 'x ≥ 0', 'x ≤ -2', 'x ≥ -2'],
+                answer: 'x ≥ 0'
+            },
+            {
+                type: 'multiple-choice',
+                question: '16. If f(x) = 2x^2 - 5x + 1, find f(-3).',
+                options: ['4', '10', '34', '46'],
+                answer: '34'
+            },
+            {
+                type: 'multiple-choice',
+                question: '17. Which of the following points lies on the line y = -1/2x + 3?',
+                options: ['(2, 2)', '(-4, 1)', '(6, 0)', '(0, -3)'],
+                answer: '(2, 2)'
+            },
+            {
+                type: 'multiple-choice',
+                question: '18. The sum of three consecutive integers is 84. What is the largest integer?',
+                options: ['27', '28', '29', '30'],
+                answer: '29'
+            },
+            {
+                type: 'multiple-choice',
+                question: '19. Simplify: (x^2 - 4x + 4) / (x^2 - 4)',
+                options: ['(x-2)/(x+2)', '(x+2)/(x-2)', '1', 'x-2'],
+                answer: '(x-2)/(x+2)'
+            },
+            {
+                type: 'multiple-choice',
+                question: '20. If y varies inversely as the square of x, and y = 3 when x = 2, what is y when x = 6?',
+                options: ['1/3', '1/6', '1/12', '1/2'],
+                answer: '1/3'
+            },
+            // Part 3: Geometry and Coordinate Geometry
+            {
+                type: 'multiple-choice',
+                question: '21. A triangle has vertices at (1, 2), (4, 2), and (4, 6). What is the area of the triangle?',
+                options: ['6 square units', '10 square units', '12 square units', '15 square units'],
+                answer: '6 square units'
+            },
+            {
+                type: 'multiple-choice',
+                question: '22. What is the distance between the points (-5, -1) and (3, 5)?',
+                options: ['10', '12', 'sqrt(68)', 'sqrt(100)'],
+                answer: '10'
+            },
+            {
+                type: 'multiple-choice',
+                question: '23. The coordinates of point A are (3, -2). If A is reflected across the y-axis, what are the new coordinates?',
+                options: ['(-3, -2)', '(3, 2)', '(-3, 2)', '(-2, 3)'],
+                answer: '(-3, -2)'
+            },
+            {
+                type: 'multiple-choice',
+                question: '24. A circle has a diameter with endpoints at (2, -3) and (6, 5). What is the center of the circle?',
+                options: ['(4, 1)', '(4, -1)', '(2, 4)', '(8, 2)'],
+                answer: '(4, 1)'
+            },
+            {
+                type: 'multiple-choice',
+                question: '25. What is the slope of the line perpendicular to the line y = -3/4x + 2?',
+                options: ['3/4', '-4/3', '4/3', '-3/4'],
+                answer: '4/3'
+            },
+            {
+                type: 'multiple-choice',
+                question: '26. A rectangle has a perimeter of 40 cm. If its length is three times its width, what is its area?',
+                options: ['25 cm^2', '75 cm^2', '100 cm^2', '150 cm^2'],
+                answer: '75 cm^2'
+            },
+            {
+                type: 'multiple-choice',
+                question: '27. A square has vertices at (0, 0), (k, 0), (k, k), and (0, k). If the area of the square is 36 square units, what is the value of k?',
+                options: ['3', '6', '9', '18'],
+                answer: '6'
+            },
+            {
+                type: 'multiple-choice',
+                question: '28. Two angles are supplementary. If one angle is 2x + 10 degrees and the other is 3x - 30 degrees, find the measure of the smaller angle.',
+                options: ['70 degrees', '110 degrees', '50 degrees', '130 degrees'],
+                answer: '70 degrees'
+            },
+            {
+                type: 'multiple-choice',
+                question: '29. What is the measure of each interior angle of a regular octagon?',
+                options: ['120 degrees', '135 degrees', '144 degrees', '150 degrees'],
+                answer: '135 degrees'
+            },
+            {
+                type: 'multiple-choice',
+                question: '30. If the circumference of a circle is 10π cm, what is its area?',
+                options: ['25π cm^2', '50π cm^2', '100π cm^2', '10π cm^2'],
+                answer: '25π cm^2'
+            },
+            // Part 4: Functions and Graphs
+            {
+                type: 'multiple-choice',
+                question: '31. Which of the following relations is NOT a function?',
+                options: ['(1, 2), (2, 3), (3, 4)', '(1, 2), (1, 3), (2, 4)', '(2, 1), (3, 1), (4, 1)', '(1, 1), (2, 2), (3, 3)'],
+                answer: '(1, 2), (1, 3), (2, 4)'
+            },
+            {
+                type: 'multiple-choice',
+                question: '32. What is the x-intercept of the line 3x - 5y = 15?',
+                options: ['(0, -3)', '(5, 0)', '(0, 5)', '(-3, 0)'],
+                answer: '(5, 0)'
+            },
+            {
+                type: 'multiple-choice',
+                question: '33. The graph of y = x^2 - 4x + 3 opens:',
+                options: ['Upwards', 'Downwards', 'To the left', 'To the right'],
+                answer: 'Upwards'
+            },
+            {
+                type: 'multiple-choice',
+                question: '34. If a graph passes through the points (-1, 4) and (3, -2), what is the equation of the line?',
+                options: ['y = -3/2x + 5/2', 'y = -3/2x - 5/2', 'y = -2/3x + 10/3', 'y = -2/3x - 10/3'],
+                answer: 'y = -3/2x + 5/2'
+            },
+            {
+                type: 'multiple-choice',
+                question: '35. Which quadrant contains the point (-5, 8)?',
+                options: ['Quadrant I', 'Quadrant II', 'Quadrant III', 'Quadrant IV'],
+                answer: 'Quadrant II'
+            },
+            {
+                type: 'multiple-choice',
+                question: '36. The vertex of the parabola y = (x+2)^2 - 3 is:',
+                options: ['(2, 3)', '(-2, 3)', '(2, -3)', '(-2, -3)'],
+                answer: '(-2, -3)'
+            },
+            // Part 5: Advanced Topics / Problem Solving
+            {
+                type: 'multiple-choice',
+                question: '37. A jar contains only red, blue, and green marbles. The probability of picking a red marble is 1/4, and the probability of picking a blue marble is 1/3. What is the probability of picking a green marble?',
+                options: ['5/12', '7/12', '1/2', '1/6'],
+                answer: '5/12'
+            },
+            {
+                type: 'multiple-choice',
+                question: '38. A car travels at an average speed of 60 mph for 2 hours and then at an average speed of 40 mph for 1 hour. What is the average speed for the entire trip?',
+                options: ['50 mph', '53.33 mph', '55 mph', '56.67 mph'],
+                answer: '53.33 mph'
+            },
+            {
+                type: 'multiple-choice',
+                question: '39. If (x+y)/2 = 7 and (x-y)/2 = 3, what is the value of xy?',
+                options: ['10', '20', '24', '40'],
+                answer: '40'
+            },
+            {
+                type: 'multiple-choice',
+                question: '40. How many distinct permutations can be made from the letters of the word "MISSISSIPPI"?',
+                options: ['34,650', '11!', '3,465', '1,155'],
+                answer: '34,650'
+            },
+            {
+                type: 'multiple-choice',
+                question: '41. A sum of money is invested at a simple interest rate of 5% per annum. If the interest earned after 4 years is $100, what was the principal amount invested?',
+                options: ['$250', '$500', '$1000', '$1500'],
+                answer: '$500'
+            },
+            {
+                type: 'multiple-choice',
+                question: '42. If 3^x = 81, what is the value of x?',
+                options: ['2', '3', '4', '5'],
+                answer: '4'
+            },
+            {
+                type: 'multiple-choice',
+                question: '43. What is the sum of the first 20 positive integers?',
+                options: ['200', '210', '220', '230'],
+                answer: '210'
+            },
+            {
+                type: 'multiple-choice',
+                question: '44. Which of the following is an irrational number?',
+                options: ['sqrt(9)', '0.333...', '2/5', 'sqrt(7)'],
+                answer: 'sqrt(7)'
+            },
+            {
+                type: 'multiple-choice',
+                question: '45. A bag contains 5 red balls and 3 blue balls. If two balls are drawn without replacement, what is the probability that both are red?',
+                options: ['10/28', '20/56', '5/14', '25/64'],
+                answer: '5/14'
+            },
+            {
+                type: 'multiple-choice',
+                question: '46. What is the perimeter of a semi-circle with a radius of 7 cm? (Use π ≈ 22/7)',
+                options: ['22 cm', '36 cm', '44 cm', '56 cm'],
+                answer: '36 cm'
+            }
+        ];
+
+        let currentQuestionIndex = 0;
+        let score = 0;
+        let userAnswers = []; // To store user's answers
+        let questionResults = []; // To store true/false for correctness
+        const totalPossibleScore = 200; // Total score for the test
+        const pointsPerQuestion = totalPossibleScore / questions.length; // Points per correct answer
+
+        const questionDisplay = document.getElementById('questionDisplay');
+        const optionsDisplay = document.getElementById('optionsDisplay');
+        const answerInput = document.getElementById('answerInput');
+        const submitButton = document.getElementById('submitButton');
+        const nextButton = document.getElementById('nextButton');
+        const previousButton = document.getElementById('previousButton');
+        const testContainer = document.getElementById('testContainer');
+        const resultContainer = document.getElementById('resultContainer');
+        const scoreDisplay = document.getElementById('scoreDisplay');
+        const totalPossibleScoreDisplay = document.getElementById('totalPossibleScoreDisplay');
+        const detailedResultsContainer = document.getElementById('detailedResultsContainer');
+        const restartButton = document.getElementById('restartButton');
+
+        // Function to load a question
+        function loadQuestion() {
+            const q = questions[currentQuestionIndex];
+            questionDisplay.textContent = q.question;
+
+            optionsDisplay.innerHTML = '';
+            answerInput.value = '';
+            nextButton.classList.add('hidden'); // Hide next button until answer is submitted
+            submitButton.classList.remove('hidden'); // Show submit button
+
+            // Hide previous button on the first question
+            if (currentQuestionIndex === 0) {
+                previousButton.classList.add('hidden');
+            } else {
+                previousButton.classList.remove('hidden');
+            }
+
+            // If we are on the last question, change submit button text
+            if (currentQuestionIndex === questions.length - 1) {
+                submitButton.textContent = 'Finish Test';
+            } else {
+                submitButton.textContent = 'Submit Answer';
+            }
+
+            if (q.type === 'multiple-choice') {
+                answerInput.classList.add('hidden');
+                optionsDisplay.classList.remove('hidden'); // Ensure options are visible
+                q.options.forEach(option => {
+                    const button = document.createElement('button');
+                    button.textContent = option;
+                    button.className = 'w-full p-3 border border-gray-300 rounded-lg text-left hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500 transition duration-200';
+                    button.onclick = () => selectOption(option, button);
+                    optionsDisplay.appendChild(button);
+                });
+
+                // Pre-select and highlight answer if already answered
+                const storedAnswer = userAnswers[currentQuestionIndex];
+                if (storedAnswer !== undefined && storedAnswer !== null && storedAnswer !== '') {
+                    const buttons = optionsDisplay.children;
+                    for (let i = 0; i < buttons.length; i++) {
+                        if (buttons[i].textContent === storedAnswer) {
+                            // Visually highlight the previously selected option
+                            buttons[i].classList.add('bg-blue-200');
+                            // Also update the global selectedAnswer and selectedButton for proper submission
+                            selectedAnswer = storedAnswer;
+                            selectedButton = buttons[i];
+                            break;
+                        }
+                    }
+                } else {
+                    // Reset selectedAnswer and selectedButton if no answer was stored
+                    selectedAnswer = null;
+                    selectedButton = null;
+                }
+
+            } else if (q.type === 'text-input') {
+                optionsDisplay.classList.add('hidden'); // Hide options for text input
+                answerInput.classList.remove('hidden');
+                // Pre-fill answer if already answered
+                answerInput.value = userAnswers[currentQuestionIndex] || '';
+            }
+            // Ensure all options/input are enabled for the new question
+            Array.from(optionsDisplay.children).forEach(button => {
+                button.classList.remove('bg-green-200', 'bg-red-200', 'border-green-500', 'border-red-500');
+                button.disabled = false;
+            });
+            answerInput.disabled = false;
+        }
+
+        let selectedAnswer = null;
+        let selectedButton = null;
+
+        // Function to handle option selection for multiple-choice questions
+        function selectOption(option, button) {
+            if (selectedButton) {
+                selectedButton.classList.remove('bg-blue-200');
+            }
+            selectedAnswer = option;
+            selectedButton = button;
+            selectedButton.classList.add('bg-blue-200');
+        }
+
+        // Function to submit the answer
+        submitButton.onclick = () => {
+            const q = questions[currentQuestionIndex];
+            let isCorrect = false;
+            let userAnswerForCurrentQuestion = '';
+
+            if (q.type === 'multiple-choice') {
+                userAnswerForCurrentQuestion = selectedAnswer;
+                if (selectedAnswer === q.answer) {
+                    isCorrect = true;
+                }
+                // Disable all options after submission
+                Array.from(optionsDisplay.children).forEach(button => {
+                    button.disabled = true;
+                });
+            } else if (q.type === 'text-input') {
+                userAnswerForCurrentQuestion = answerInput.value.trim();
+                // Special handling for numerical answers to allow for slight variations in formatting
+                if (!isNaN(parseFloat(q.answer)) && !isNaN(parseFloat(userAnswerForCurrentQuestion))) {
+                    isCorrect = Math.abs(parseFloat(userAnswerForCurrentQuestion) - parseFloat(q.answer)) < 0.001; // For float comparisons
+                } else {
+                    isCorrect = userAnswerForCurrentQuestion.toLowerCase() === q.answer.toLowerCase();
+                }
+                answerInput.disabled = true; // Disable input after submission
+            }
+
+            userAnswers[currentQuestionIndex] = userAnswerForCurrentQuestion;
+            questionResults[currentQuestionIndex] = isCorrect;
+
+            // No immediate showMessage or visual feedback here, just transition to next button
+            submitButton.classList.add('hidden');
+            nextButton.classList.remove('hidden');
+            selectedAnswer = null;
+            selectedButton = null;
+
+            // If it's the last question, directly end the test
+            if (currentQuestionIndex === questions.length - 1) {
+                endTest();
+            }
+        };
+
+        // Function to go to the next question
+        nextButton.onclick = () => {
+            currentQuestionIndex++;
+            if (currentQuestionIndex < questions.length) {
+                loadQuestion();
+            } else {
+                // This branch should ideally not be hit if submit on last question calls endTest()
+                endTest();
+            }
+        };
+
+        // Function to go to the previous question
+        previousButton.onclick = () => {
+            if (currentQuestionIndex > 0) {
+                currentQuestionIndex--;
+                loadQuestion();
+            }
+        };
+
+        // Function to end the test and display results
+        function endTest() {
+            testContainer.classList.add('hidden');
+            resultContainer.classList.remove('hidden');
+
+            // Calculate final score based on stored results
+            let correctCount = questionResults.filter(result => result === true).length;
+            score = (correctCount * pointsPerQuestion).toFixed(2); // Calculate score and format to 2 decimal places
+            scoreDisplay.textContent = score;
+            totalPossibleScoreDisplay.textContent = totalPossibleScore;
+
+            detailedResultsContainer.innerHTML = ''; // Clear previous results
+
+            questions.forEach((q, index) => {
+                const userAnswer = userAnswers[index];
+                const isCorrect = questionResults[index];
+                const correctAnswer = q.answer;
+
+                const resultItem = document.createElement('div');
+                resultItem.className = 'p-3 border rounded-lg ' + (isCorrect ? 'border-green-300 bg-green-50' : 'border-red-300 bg-red-50');
+
+                let feedbackHtml = `
+                    <p class="font-bold text-gray-800">Question ${index + 1}:</p>
+                    <p class="text-gray-700">${q.question}</p>
+                    <p>Your Answer: <span class="${isCorrect ? 'text-green-700' : 'text-red-700'} font-semibold">${userAnswer === null || userAnswer === '' ? 'No answer provided' : userAnswer}</span></p>
+                    <p>Correct Answer: <span class="text-green-700 font-semibold">${correctAnswer}</span></p>
+                `;
+                resultItem.innerHTML = feedbackHtml;
+                detailedResultsContainer.appendChild(resultItem);
+            });
+        }
+
+        // Function to restart the test
+        restartButton.onclick = () => {
+            currentQuestionIndex = 0;
+            score = 0;
+            userAnswers = []; // Reset user answers
+            questionResults = []; // Reset question results
+            testContainer.classList.remove('hidden');
+            resultContainer.classList.add('hidden');
+            answerInput.disabled = false; // Re-enable input for new test
+            loadQuestion();
+        };
+
+        // Initial load of the first question when the window loads
+        window.onload = loadQuestion;
+    </script>
+</body>
+</html>
