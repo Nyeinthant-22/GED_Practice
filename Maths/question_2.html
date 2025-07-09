@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Interactive GED Math Practice</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Chosen Palette: Warm Neutrals (Background: bg-slate-100, Container: bg-white, Primary: bg-indigo-600, Accent: text-teal-500) -->
+    <!-- Application Structure Plan: A linear, one-question-at-a-time quiz application. This structure transforms the static list into an interactive study tool, preventing user overwhelm and providing immediate feedback to reinforce learning. The flow proceeds from question to question, culminating in a results screen with a visual summary chart and review options. This is the most effective way to help a user practice for a test. -->
+    <!-- Visualization & Content Choices: Questions 1-5 (Comparisons) -> Inform/Test -> Text input -> User types symbol, gets feedback -> Simple and direct for this question type. Questions 6-40 (Multiple Choice) -> Inform/Test -> Clickable buttons -> User selects an option -> Standard, intuitive quiz interaction. Final Results -> Summarize -> Chart.js Doughnut Chart -> Visually shows correct vs. incorrect answers -> Clear performance summary. All logic handled by vanilla JS. -->
+    <!-- CONFIRMATION: NO SVG graphics used. NO Mermaid JS used. -->
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        .math-sup {
+            font-size: 0.7em;
+            vertical-align: super;
+        }
+        .btn-option {
+            transition: all 0.2s ease-in-out;
+        }
+        .btn-option.selected {
+            background-color: #e0e7ff;
+            border-color: #6366f1;
+        }
+    </style>
+</head>
+<body class="bg-slate-100 text-slate-800">
+
+    <div id="app-container" class="max-w-3xl mx-auto p-4 sm:p-6 md:p-8">
+        
+        <header class="text-center mb-8">
+            <h1 class="text-3xl sm:text-4xl font-bold text-slate-900">GED Math Practice Quiz</h1>
+            <p id="intro-text" class="mt-2 text-slate-600">Welcome! Test your knowledge with these 40 questions. You'll see your results and answers at the end.</p>
+        </header>
+
+        <main id="quiz-container" class="bg-white p-6 sm:p-8 rounded-2xl shadow-lg">
+            <div id="progress-container" class="flex justify-between items-center mb-6">
+                <span id="question-counter" class="text-sm font-medium text-slate-500"></span>
+                <span id="score-counter" class="text-sm font-medium text-indigo-600"></span>
+            </div>
+            
+            <div id="question-area">
+                <h2 id="question-text" class="text-lg sm:text-xl font-semibold mb-6 min-h-[56px]"></h2>
+                <div id="answer-options" class="space-y-3"></div>
+            </div>
+
+            <div id="feedback-area" class="mt-6 min-h-[24px] text-center font-medium"></div>
+            
+            <div id="navigation-buttons" class="mt-6 flex justify-end">
+                <button id="submit-btn" class="bg-indigo-600 text-white font-bold py-2 px-6 rounded-lg shadow hover:bg-indigo-700 transition-colors disabled:bg-slate-300 disabled:cursor-not-allowed">Submit</button>
+                <button id="next-btn" class="bg-indigo-600 text-white font-bold py-2 px-6 rounded-lg shadow hover:bg-indigo-700 transition-colors hidden">Next</button>
+            </div>
+        </main>
+
+        <div id="results-container" class="bg-white p-6 sm:p-8 rounded-2xl shadow-lg text-center hidden">
+            <h2 class="text-2xl sm:text-3xl font-bold text-slate-900">Quiz Complete!</h2>
+            <p class="mt-2 text-slate-600">Here's how you did:</p>
+            <p id="final-score" class="text-4xl font-bold my-4 text-indigo-600"></p>
+            
+            <div class="chart-container relative mx-auto w-full max-w-xs h-64 sm:h-72">
+                <canvas id="resultsChart"></canvas>
+            </div>
+
+            <div id="review-section" class="mt-8 text-left">
+                <h3 class="text-xl font-bold mb-4 text-slate-800">Review Your Answers</h3>
+            </div>
+            
+            <div class="mt-8">
+                <button id="restart-btn" class="bg-indigo-600 text-white font-bold py-3 px-8 rounded-lg shadow hover:bg-indigo-700 transition-colors">Restart Quiz</button>
+            </div>
+        </div>
+        
+    </div>
+
+    <script>
+        const quizData = [
+            { question: "Place the correct symbol, < or >, between the numbers: 150 ( ) -75.", type: "input", answer: ">" },
+            { question: "Place the correct symbol, < or >, between the numbers: -32 ( ) -35.", type: "input", answer: ">" },
+            { question: "Place the correct symbol, < or >, between the numbers: 0 ( ) -10.", type: "input", answer: ">" },
+            { question: "Place the correct symbol, < or >, between the numbers: -1 ( ) 1.", type: "input", answer: "<" },
+            { question: "Place the correct symbol, < or >, between the numbers: -200 ( ) -199.", type: "input", answer: "<" },
+            { question: "What is the opposite of 8, simplified?", options: ["-(-8)", "1/8", "-8", "8"], answer: "-8" },
+            { question: "What is the opposite of -15, simplified?", options: ["1/15", "-15", "15", "-(-15)"], answer: "15" },
+            { question: "What is the simplified form of the opposite of the opposite of -5?", options: ["-5", "5", "-(-(-5))", "1/5"], answer: "-5" },
+            { question: "What is the simplified form of the opposite of the opposite of 20?", options: ["20", "-20", "-(-20)", "1/20"], answer: "20" },
+            { question: "What is |-100|, simplified?", options: ["100", "(-100)", "-100", "|100|"], answer: "100" },
+            { question: "What is |25|, simplified?", options: ["|-25|", "-25", "25", "(25)"], answer: "25" },
+            { question: "What is |-0.5|, simplified?", options: ["-0.5", "0.5", "|0.5|", "(-0.5)"], answer: "0.5" },
+            { question: "What is the absolute value of -9?", options: ["-9", "9", "|-9|", "(9)"], answer: "9" },
+            { question: "Which quadrant has negative x values and positive y values?", options: ["QI", "QII", "QIII", "QIV"], answer: "QII" },
+            { question: "Which quadrant has positive x values and positive y values?", options: ["QI", "QII", "QIII", "QIV"], answer: "QI" },
+            { question: "Which quadrant has negative x values and negative y values?", options: ["QI", "QII", "QIII", "QIV"], answer: "QIII" },
+            { question: "Which quadrant has positive x values and negative y values?", options: ["QI", "QII", "QIII", "QIV"], answer: "QIV" },
+            { question: "Which point is the reflection of (3, -6) in the x-axis?", options: ["(-3, -6)", "(3, 6)", "(-3, 6)", "(6, -3)"], answer: "(3, 6)" },
+            { question: "Which point is the reflection of (-2, 5) in the y-axis?", options: ["(-2, -5)", "(2, 5)", "(5, -2)", "(2, -5)"], answer: "(2, 5)" },
+            { question: "Which point is the reflection of (1, 8) in the x-axis?", options: ["(-1, 8)", "(1, -8)", "(-1, -8)", "(8, 1)"], answer: "(1, -8)" },
+            { question: "Solve for x: 3x + 7 = 22.", options: ["x = 3", "x = 5", "x = 7", "x = 9"], answer: "x = 5" },
+            { question: "What is the value of the expression 2a - 5b when a = 10 and b = 3?", options: ["5", "10", "15", "25"], answer: "5" },
+            { question: "Solve the inequality: 4x - 2 < 10.", options: ["x < 2", "x < 3", "x > 2", "x > 3"], answer: "x < 3" },
+            { question: "If f(x) = x<sup class='math-sup'>2</sup> + 3, what is f(-2)?", options: ["-1", "1", "7", "10"], answer: "7" },
+            { question: "What is the slope of the line that passes through the points (2, 4) and (5, 10)?", options: ["1/2", "2", "-1/2", "-2"], answer: "2" },
+            { question: "A rectangle has a length of 12 cm and a width of 5 cm. What is its perimeter?", options: ["17 cm", "34 cm", "60 cm", "120 cm"], answer: "34 cm" },
+            { question: "What is the area of a triangle with a base of 8 inches and a height of 6 inches?", options: ["14 square inches", "24 square inches", "48 square inches", "96 square inches"], answer: "24 square inches" },
+            { question: "A circular garden has a radius of 7 feet. What is its approximate circumference? (Use π ≈ 3.14)", options: ["21.98 feet", "43.96 feet", "153.86 feet", "307.72 feet"], answer: "43.96 feet" },
+            { question: "What is the volume of a rectangular prism with length 4 m, width 3 m, and height 5 m?", options: ["12 cubic meters", "20 cubic meters", "60 cubic meters", "120 cubic meters"], answer: "60 cubic meters" },
+            { question: "In a right triangle, if the two legs are 3 units and 4 units, what is the length of the hypotenuse?", options: ["5 units", "7 units", "12 units", "25 units"], answer: "5 units" },
+            { question: "What is the measure of angle x if two parallel lines are intersected by a transversal, and one of the corresponding angles is 70°?", options: ["20°", "70°", "110°", "180°"], answer: "70°" },
+            { question: "If a square has an area of 81 square units, what is the length of one of its sides?", options: ["8 units", "9 units", "18 units", "40.5 units"], answer: "9 units" },
+            { question: "What is the equation of a line with a slope of 3 and a y-intercept of -2?", options: ["y = 3x + 2", "y = 3x - 2", "y = -2x + 3", "y = 2x - 3"], answer: "y = 3x - 2" },
+            { question: "Evaluate the expression 5(x - 2) + 3x when x = 4.", options: ["10", "18", "22", "30"], answer: "22" },
+            { question: "A cylindrical can has a radius of 3 cm and a height of 10 cm. What is its approximate volume? (Use π ≈ 3.14)", options: ["94.2 cubic cm", "188.4 cubic cm", "282.6 cubic cm", "314 cubic cm"], answer: "282.6 cubic cm" },
+            { question: "Which ordered pair is a solution to the equation y = 2x - 1?", options: ["(0, 1)", "(1, 0)", "(2, 3)", "(3, 4)"], answer: "(2, 3)" },
+            { question: "What is the sum of the angles in a quadrilateral?", options: ["90°", "180°", "360°", "540°"], answer: "360°" },
+            { question: "If x + 5 = 12, what is the value of x?", options: ["5", "7", "12", "17"], answer: "7" },
+            { question: "What is the perimeter of a regular hexagon with a side length of 6 cm?", options: ["12 cm", "18 cm", "36 cm", "42 cm"], answer: "36 cm" },
+            { question: "Simplify the expression: 7x - 3y + 2x + 5y.", options: ["9x + 8y", "9x + 2y", "5x + 8y", "5x + 2y"], answer: "9x + 2y" }
+        ];
+
+        let currentQuestionIndex = 0;
+        let score = 0;
+        let selectedAnswer = null;
+        let answered = false;
+        let chartInstance = null;
+        let quizResults = [];
+
+        const questionCounterEl = document.getElementById('question-counter');
+        const scoreCounterEl = document.getElementById('score-counter');
+        const questionTextEl = document.getElementById('question-text');
+        const answerOptionsEl = document.getElementById('answer-options');
+        const feedbackAreaEl = document.getElementById('feedback-area');
+        const submitBtn = document.getElementById('submit-btn');
+        const nextBtn = document.getElementById('next-btn');
+        const restartBtn = document.getElementById('restart-btn');
+        const quizContainer = document.getElementById('quiz-container');
+        const resultsContainer = document.getElementById('results-container');
+        const introText = document.getElementById('intro-text');
+        const reviewSectionEl = document.getElementById('review-section');
+
+        function startQuiz() {
+            currentQuestionIndex = 0;
+            score = 0;
+            answered = false;
+            selectedAnswer = null;
+            quizResults = [];
+            quizContainer.style.display = 'block';
+            resultsContainer.style.display = 'none';
+            introText.style.display = 'block';
+            reviewSectionEl.innerHTML = '<h3 class="text-xl font-bold mb-4 text-slate-800">Review Your Answers</h3>'; // Clear previous review
+            displayQuestion();
+        }
+
+        function displayQuestion() {
+            answered = false;
+            selectedAnswer = null;
+            feedbackAreaEl.innerHTML = '';
+            submitBtn.classList.remove('hidden');
+            nextBtn.classList.add('hidden');
+            submitBtn.disabled = true;
+
+            const question = quizData[currentQuestionIndex];
+            questionTextEl.innerHTML = question.question;
+            questionCounterEl.textContent = `Question ${currentQuestionIndex + 1} of ${quizData.length}`;
+            scoreCounterEl.textContent = `Score: ${score}`;
+            answerOptionsEl.innerHTML = '';
+
+            if (question.type === 'input') {
+                const input = document.createElement('input');
+                input.type = 'text';
+                input.id = 'text-answer';
+                input.className = 'mt-2 p-2 w-full max-w-xs mx-auto block border border-slate-300 rounded-md text-center text-xl font-mono focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500';
+                input.maxLength = 1;
+                answerOptionsEl.appendChild(input);
+                input.addEventListener('input', () => {
+                    selectedAnswer = input.value;
+                    submitBtn.disabled = selectedAnswer.trim() === '';
+                });
+            } else {
+                question.options.forEach(option => {
+                    const button = document.createElement('button');
+                    button.innerHTML = option;
+                    button.className = 'w-full text-left p-4 border border-slate-300 rounded-lg btn-option hover:bg-slate-50';
+                    button.onclick = () => {
+                        if (answered) return;
+                        const currentlySelected = document.querySelector('.btn-option.selected');
+                        if (currentlySelected) {
+                            currentlySelected.classList.remove('selected');
+                        }
+                        button.classList.add('selected');
+                        selectedAnswer = option;
+                        submitBtn.disabled = false;
+                    };
+                    answerOptionsEl.appendChild(button);
+                });
+            }
+        }
+
+        function checkAnswer() {
+            if (answered) return;
+            answered = true;
+
+            const question = quizData[currentQuestionIndex];
+            const isCorrect = selectedAnswer === question.answer;
+
+            if (isCorrect) {
+                score++;
+            }
+
+            quizResults.push({
+                question: question.question,
+                userAnswer: selectedAnswer,
+                isCorrect: isCorrect,
+                correctAnswer: question.answer,
+                options: question.options || []
+            });
+
+            scoreCounterEl.textContent = `Score: ${score}`;
+            submitBtn.classList.add('hidden');
+            nextBtn.classList.remove('hidden');
+        }
+
+        function showNextQuestion() {
+            currentQuestionIndex++;
+            if (currentQuestionIndex < quizData.length) {
+                displayQuestion();
+            } else {
+                showResults();
+            }
+        }
+        
+        function showResults() {
+            quizContainer.style.display = 'none';
+            resultsContainer.style.display = 'block';
+            introText.style.display = 'none';
+            
+            document.getElementById('final-score').textContent = `${score} / ${quizData.length}`;
+            
+            const ctx = document.getElementById('resultsChart').getContext('2d');
+            if(chartInstance) {
+                chartInstance.destroy();
+            }
+            chartInstance = new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: ['Correct', 'Incorrect'],
+                    datasets: [{
+                        data: [score, quizData.length - score],
+                        backgroundColor: ['#4ade80', '#f87171'],
+                        borderColor: ['#ffffff', '#ffffff'],
+                        borderWidth: 4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    cutout: '70%',
+                    plugins: {
+                        legend: {
+                            position: 'bottom',
+                        },
+                        tooltip: {
+                            enabled: true
+                        }
+                    }
+                }
+            });
+
+            // Populate review section
+            quizResults.forEach((result, index) => {
+                const questionReviewEl = document.createElement('div');
+                questionReviewEl.className = `mb-6 p-4 rounded-lg shadow-sm ${result.isCorrect ? 'bg-green-50 border border-green-200' : 'bg-red-50 border border-red-200'}`;
+                
+                let optionsHtml = '';
+                if (quizData[index].type === 'input') {
+                    optionsHtml = `<p class="mt-2 text-sm text-slate-700">Your Answer: <span class="font-semibold ${result.isCorrect ? 'text-green-700' : 'text-red-700'}">${result.userAnswer}</span></p>`;
+                } else {
+                    optionsHtml = `<div class="mt-3 space-y-2">`;
+                    result.options.forEach(option => {
+                        let optionClass = 'block p-2 rounded-md text-sm';
+                        if (option === result.correctAnswer) {
+                            optionClass += ' bg-green-200 text-green-800 font-semibold';
+                        } else if (option === result.userAnswer && !result.isCorrect) {
+                            optionClass += ' bg-red-200 text-red-800 font-semibold';
+                        } else {
+                            optionClass += ' bg-slate-100 text-slate-700';
+                        }
+                        optionsHtml += `<span class="${optionClass}">${option}</span>`;
+                    });
+                    optionsHtml += `</div>`;
+                }
+
+                questionReviewEl.innerHTML = `
+                    <p class="font-semibold text-slate-900">Question ${index + 1}: ${result.question}</p>
+                    ${optionsHtml}
+                    <p class="mt-2 text-sm text-slate-700">Correct Answer: <span class="font-semibold text-green-700">${result.correctAnswer}</span></p>
+                `;
+                reviewSectionEl.appendChild(questionReviewEl);
+            });
+        }
+
+        submitBtn.addEventListener('click', checkAnswer);
+        nextBtn.addEventListener('click', showNextQuestion);
+        restartBtn.addEventListener('click', startQuiz);
+
+        startQuiz();
+    </script>
+</body>
+</html>
